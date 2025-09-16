@@ -14,26 +14,29 @@ import {
 import { Edit3, Save, AlertCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { StandaloneCurrencyInput } from "@/lib/ControlledCurrencyInput";
-import { subcategories, formatCurrency } from "@/data/mockData";
+import { subcategories, formatCurrency, type DamageType } from "@/data/mockData";
 
 interface CustomDamageEditModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  selectedDamages: any[]; // Damage types to edit
+  selectedDamages: DamageType[]; // Damage types to edit
   onSave: (changes: { damageId: string; subcategoryId: string; newValue: number }[]) => Promise<boolean>;
+  getMatrixValue?: (subcategoryId: string, damageId: string) => number; // Function to get current matrix values
 }
 
 interface EditValue {
   damageId: string;
   subcategoryId: string;
   value: number; // Value in cents
+  originalValue: number; // Value in cents - to track changes
 }
 
-export function CustomDamageEditModal({ 
-  open, 
-  onOpenChange, 
-  selectedDamages, 
-  onSave 
+export function CustomDamageEditModal({
+  open,
+  onOpenChange,
+  selectedDamages,
+  onSave,
+  getMatrixValue
 }: CustomDamageEditModalProps) {
   const [editValues, setEditValues] = useState<EditValue[]>([]);
   const [isSaving, setIsSaving] = useState(false);
@@ -42,38 +45,56 @@ export function CustomDamageEditModal({
   // Get active subcategories
   const activeSubcategories = subcategories.filter(sub => sub.active);
 
-  // Debug log for received props
+  // Debug log for received props and state changes
   useEffect(() => {
     console.log('🔧 CustomDamageEditModal props:', {
       open,
       selectedDamagesCount: selectedDamages.length,
       subcategoriesCount: activeSubcategories.length,
-      selectedDamages: selectedDamages.map(d => ({ id: d.id, name: d.name }))
+      editValuesCount: editValues.length,
+      hasGetMatrixValue: !!getMatrixValue,
+      selectedDamages: selectedDamages.map(d => ({ id: d.id, name: d.name, discount: d.discount }))
     });
-  }, [open, selectedDamages]);
 
-  // Initialize edit values when modal opens
+    if (getMatrixValue && selectedDamages.length > 0 && activeSubcategories.length > 0) {
+      console.log('🔧 Sample matrix values:');
+      selectedDamages.slice(0, 2).forEach(damage => {
+        activeSubcategories.slice(0, 2).forEach(subcategory => {
+          const matrixValue = getMatrixValue(subcategory.id, damage.id);
+          console.log(`  ${subcategory.name} x ${damage.name}: R$ ${matrixValue}`);
+        });
+      });
+    }
+  }, [open, selectedDamages, activeSubcategories, editValues.length, getMatrixValue]);
+
+  // Initialize edit values when modal opens - only reset when modal first opens
   useEffect(() => {
-    if (open && selectedDamages.length > 0) {
+    if (open && selectedDamages.length > 0 && editValues.length === 0) {
       const initialValues: EditValue[] = [];
-      
+
       selectedDamages.forEach(damage => {
         activeSubcategories.forEach(subcategory => {
-          // Use the damage's discount value in cents (reais * 100)
+          // Get the actual matrix value, fallback to damage's default discount
+          const matrixValue = getMatrixValue
+            ? getMatrixValue(subcategory.id, damage.id)
+            : damage.discount || 0;
+
+          const valueInCents = matrixValue * 100; // Convert to cents
           initialValues.push({
             damageId: damage.id,
             subcategoryId: subcategory.id,
-            value: (damage.discount || 0) * 100
+            value: valueInCents,
+            originalValue: valueInCents
           });
         });
       });
-      
+
       setEditValues(initialValues);
     } else if (!open) {
       // Reset when modal closes
       setEditValues([]);
     }
-  }, [open, selectedDamages]); // Removed activeSubcategories from dependencies
+  }, [open, selectedDamages, activeSubcategories, editValues.length, getMatrixValue]);
 
   // Get current value for a specific cell
   const getValue = useCallback((damageId: string, subcategoryId: string): number => {
@@ -85,33 +106,58 @@ export function CustomDamageEditModal({
 
   // Update a specific cell value
   const updateValue = useCallback((damageId: string, subcategoryId: string, newValue: number) => {
-    setEditValues(prev => prev.map(ev => 
-      ev.damageId === damageId && ev.subcategoryId === subcategoryId
-        ? { ...ev, value: newValue }
-        : ev
-    ));
+    setEditValues(prev => {
+      const existingIndex = prev.findIndex(ev =>
+        ev.damageId === damageId && ev.subcategoryId === subcategoryId
+      );
+
+      if (existingIndex >= 0) {
+        // Update existing value
+        const newValues = [...prev];
+        newValues[existingIndex] = { ...newValues[existingIndex], value: newValue };
+        return newValues;
+      } else {
+        // Add new value if it doesn't exist (with original value as the new value for now)
+        return [...prev, {
+          damageId,
+          subcategoryId,
+          value: newValue,
+          originalValue: newValue // This case should be rare as values should already exist
+        }];
+      }
+    });
   }, []);
 
   // Save changes
   const handleSave = async () => {
     try {
       setIsSaving(true);
-      
+
       // Collect all changes
       const changes: { damageId: string; subcategoryId: string; newValue: number }[] = [];
-      
+
       editValues.forEach(editValue => {
+        const newValue = editValue.value / 100; // Convert cents back to reais
         changes.push({
           damageId: editValue.damageId,
           subcategoryId: editValue.subcategoryId,
-          newValue: editValue.value / 100 // Convert cents back to reais
+          newValue
         });
       });
-      
+
+      console.log('💾 CustomDamageEditModal sending changes:', {
+        changesCount: changes.length,
+        sampleChanges: changes.slice(0, 3),
+        editValuesCount: editValues.length
+      });
+
       const success = await onSave(changes);
-      
+
       if (success) {
+        console.log('✅ CustomDamageEditModal: Save successful, closing modal');
         onOpenChange(false);
+      } else {
+        console.log('❌ CustomDamageEditModal: Save failed');
       }
     } catch (error) {
       console.error('Error saving custom damage values:', error);
@@ -124,6 +170,29 @@ export function CustomDamageEditModal({
       setIsSaving(false);
     }
   };
+
+  // Check if a field has been changed
+  const hasChanged = useCallback((damageId: string, subcategoryId: string): boolean => {
+    const editValue = editValues.find(ev =>
+      ev.damageId === damageId && ev.subcategoryId === subcategoryId
+    );
+    return editValue ? editValue.value !== editValue.originalValue : false;
+  }, [editValues]);
+
+  // Check if any field for a damage has changed
+  const damageHasChanges = useCallback((damageId: string): boolean => {
+    return editValues.some(ev => ev.damageId === damageId && ev.value !== ev.originalValue);
+  }, [editValues]);
+
+  // Get count of changed damages
+  const changedDamagesCount = useCallback((): number => {
+    const changedDamageIds = new Set(
+      editValues
+        .filter(ev => ev.value !== ev.originalValue)
+        .map(ev => ev.damageId)
+    );
+    return changedDamageIds.size;
+  }, [editValues]);
 
   // Get subcategory name
   const getSubcategoryName = (subcategoryId: string) => {
@@ -138,8 +207,13 @@ export function CustomDamageEditModal({
             <Edit3 className="h-5 w-5" />
             Valores Personalizados - Avarias
           </DialogTitle>
-          <DialogDescription>
-            Edite os valores (R$) de cada avaria por subcategoria. {selectedDamages.length} avaria(s) selecionada(s).
+          <DialogDescription className="flex items-center gap-3">
+            <span>Edite os valores (R$) de cada avaria por subcategoria. {selectedDamages.length} avaria(s) selecionada(s).</span>
+            {changedDamagesCount() > 0 && (
+              <Badge variant="secondary" className="bg-orange-100 text-orange-800">
+                {changedDamagesCount()} avaria(s) alterada(s)
+              </Badge>
+            )}
           </DialogDescription>
         </DialogHeader>
 
@@ -189,7 +263,12 @@ export function CustomDamageEditModal({
                                 value={getValue(damage.id, subcategory.id)}
                                 onChange={(newValue) => updateValue(damage.id, subcategory.id, newValue)}
                                 placeholder="R$ 0,00"
-                                className="w-full text-sm"
+                                className={`w-full text-sm ${
+                                  hasChanged(damage.id, subcategory.id)
+                                    ? 'bg-orange-100 border-orange-300'
+                                    : ''
+                                }`}
+                                key={`${damage.id}-${subcategory.id}-${getValue(damage.id, subcategory.id)}`}
                               />
                             </TableCell>
                           ))}

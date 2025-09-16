@@ -37,7 +37,7 @@ export function parseInputToCents(input: string): number {
   if (!input || typeof input !== 'string') return 0;
   
   // Remove espaços e símbolos de moeda
-  let cleaned = input.trim().replace(/[R$\s]/g, '');
+  const cleaned = input.trim().replace(/[R$\s]/g, '');
   
   if (!cleaned) return 0;
   
@@ -123,9 +123,24 @@ export function isValidCurrencyInput(input: string): boolean {
  */
 export function parseBRLToNumber(formattedValue: string): number {
   if (!formattedValue || typeof formattedValue !== 'string') return 0;
-  
+
   // Remove tudo exceto dígitos e vírgula, depois substitui vírgula por ponto
   const cleaned = formattedValue.replace(/[^\d,]/g, '').replace(',', '.');
   const parsed = parseFloat(cleaned);
   return isNaN(parsed) ? 0 : parsed;
+}
+
+/**
+ * Formata um valor numérico para string BRL
+ * Compatibilidade com código existente que usa formatCurrency
+ * @param value - Valor numérico (em reais)
+ * @returns String formatada em BRL
+ */
+export function formatCurrency(value: number): string {
+  return new Intl.NumberFormat('pt-BR', {
+    style: 'currency',
+    currency: 'BRL',
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2
+  }).format(value);
 }

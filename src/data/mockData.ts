@@ -41,10 +41,15 @@ export interface Store {
 export interface CardMachine {
   id: string;
   name: string;
-  store: string;
+  stores: string[]; // Array de IDs das lojas
   maxInstallments: number;
   rates: { [key: number]: number }; // installment -> rate percentage
   active: boolean;
+  paymentTypes: {
+    debit: boolean;
+    credit: boolean;
+  };
+  debitRate?: number; // taxa para débito
 }
 
 export interface RecentSearch {
@@ -66,69 +71,98 @@ export const cardMachines: CardMachine[] = [
   {
     id: 'stone-castanhal',
     name: 'Stone',
-    store: 'castanhal',
+    stores: ['castanhal'],
     maxInstallments: 12,
     rates: {
       1: 0, 2: 2.5, 3: 3.5, 4: 4.5, 5: 5.5, 6: 6.5,
       7: 7.5, 8: 8.5, 9: 9.5, 10: 10.5, 11: 11.5, 12: 12.5
     },
-    active: true
+    active: true,
+    paymentTypes: {
+      debit: true,
+      credit: true
+    },
+    debitRate: 1.2
   },
   {
     id: 'rede-castanhal',
     name: 'Rede',
-    store: 'castanhal',
+    stores: ['castanhal'],
     maxInstallments: 18,
     rates: {
       1: 0, 2: 2.8, 3: 3.8, 4: 4.8, 5: 5.8, 6: 6.8,
       7: 7.8, 8: 8.8, 9: 9.8, 10: 10.8, 11: 11.8, 12: 12.8,
       13: 13.8, 14: 14.8, 15: 15.8, 16: 16.8, 17: 17.8, 18: 18.8
     },
-    active: true
+    active: true,
+    paymentTypes: {
+      debit: true,
+      credit: true
+    },
+    debitRate: 1.8
   },
   {
     id: 'stone-belem',
     name: 'Stone',
-    store: 'belem',
+    stores: ['belem'],
     maxInstallments: 12,
     rates: {
       1: 0, 2: 2.5, 3: 3.5, 4: 4.5, 5: 5.5, 6: 6.5,
       7: 7.5, 8: 8.5, 9: 9.5, 10: 10.5, 11: 11.5, 12: 12.5
     },
-    active: true
+    active: true,
+    paymentTypes: {
+      debit: true,
+      credit: true
+    },
+    debitRate: 1.2
   },
   {
     id: 'mercadopago-belem',
     name: 'Mercado Pago',
-    store: 'belem',
+    stores: ['belem'],
     maxInstallments: 12,
     rates: {
       1: 0, 2: 3.0, 3: 4.0, 4: 5.0, 5: 6.0, 6: 7.0,
       7: 8.0, 8: 9.0, 9: 10.0, 10: 11.0, 11: 12.0, 12: 13.0
     },
-    active: true
+    active: true,
+    paymentTypes: {
+      debit: false,
+      credit: true
+    }
   },
   {
     id: 'stone-ananindeua',
     name: 'Stone',
-    store: 'ananindeua',
+    stores: ['ananindeua'],
     maxInstallments: 12,
     rates: {
       1: 0, 2: 2.5, 3: 3.5, 4: 4.5, 5: 5.5, 6: 6.5,
       7: 7.5, 8: 8.5, 9: 9.5, 10: 10.5, 11: 11.5, 12: 12.5
     },
-    active: true
+    active: true,
+    paymentTypes: {
+      debit: true,
+      credit: true
+    },
+    debitRate: 1.2
   },
   {
     id: 'pagseguro-ananindeua',
     name: 'PagSeguro',
-    store: 'ananindeua',
+    stores: ['ananindeua'],
     maxInstallments: 10,
     rates: {
       1: 0, 2: 2.9, 3: 3.9, 4: 4.9, 5: 5.9, 6: 6.9,
       7: 7.9, 8: 8.9, 9: 9.9, 10: 10.9
     },
-    active: true
+    active: true,
+    paymentTypes: {
+      debit: true,
+      credit: true
+    },
+    debitRate: 1.5
   }
 ];
 
@@ -415,16 +449,8 @@ export const searchModels = (query: string, type?: 'novo' | 'seminovo', store?: 
   return filtered.slice(0, 10); // Limit to 10 results
 };
 
-export const getStoreById = (storeId: string): Store | undefined => {
-  return stores.find(store => store.id === storeId);
-};
-
 export const getCardMachinesByStore = (storeId: string): CardMachine[] => {
-  return cardMachines.filter(machine => machine.store === storeId);
-};
-
-export const getTradeInByModel = (modelId: string, store: string): TradeInDevice | undefined => {
-  return tradeInDevices.find(device => device.modelId === modelId && device.store === store);
+  return cardMachines.filter(machine => machine.stores.includes(storeId));
 };
 
 export const formatCurrency = (value: number): string => {

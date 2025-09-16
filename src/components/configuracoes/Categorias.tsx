@@ -36,17 +36,17 @@ import {
   GripVertical,
   Trash2 
 } from "lucide-react";
-import { 
-  categories, 
+import {
   subcategories,
   damageMatrix,
   type Category,
-  type Subcategory 
+  type Subcategory
 } from "@/data/mockData";
 import { useToast } from "@/hooks/use-toast";
+import { useData } from "@/contexts/DataContext";
 
 export function Categorias() {
-  const [categoriesList, setCategoriesList] = useState<Category[]>(categories);
+  const { categories: categoriesList, addCategory, updateCategory } = useData();
   const [subcategoriesList, setSubcategoriesList] = useState<Subcategory[]>(subcategories);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [subDialogOpen, setSubDialogOpen] = useState(false);
@@ -132,27 +132,16 @@ export function Categorias() {
 
     if (editingCategory) {
       // Edit existing category
-      setCategoriesList(prev => prev.map(category => 
-        category.id === editingCategory.id 
-          ? { ...category, ...categoryForm }
-          : category
-      ));
+      updateCategory(editingCategory.id, categoryForm);
       toast({
         title: "Sucesso",
         description: "Categoria atualizada com sucesso"
       });
     } else {
       // Create new category
-      const newCategory: Category = {
-        id: `category-${Date.now()}`,
-        name: categoryForm.name,
-        active: categoryForm.active,
-        order: categoriesList.length + 1,
-        createdAt: new Date()
-      };
-      setCategoriesList(prev => [...prev, newCategory]);
+      addCategory(categoryForm);
       toast({
-        title: "Sucesso", 
+        title: "Sucesso",
         description: "Categoria criada com sucesso"
       });
     }
@@ -210,7 +199,7 @@ export function Categorias() {
   const deleteCategory = (categoryId: string) => {
     const category = categoriesList.find(c => c.id === categoryId);
     const associatedSubs = getSubcategoriesByCategory(categoryId);
-    
+
     if (associatedSubs.length > 0) {
       toast({
         title: "Não é possível excluir",
@@ -219,11 +208,12 @@ export function Categorias() {
       });
       return;
     }
-    
-    setCategoriesList(prev => prev.filter(c => c.id !== categoryId));
+
+    // For now, show message that this is in development
     toast({
-      title: "Categoria excluída",
-      description: `${category?.name} foi removida do sistema`
+      title: "Funcionalidade em desenvolvimento",
+      description: "Exclusão de categorias será implementada em breve",
+      variant: "default"
     });
   };
 

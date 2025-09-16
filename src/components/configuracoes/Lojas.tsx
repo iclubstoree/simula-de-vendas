@@ -15,11 +15,12 @@ import {
   DialogFooter
 } from "@/components/ui/dialog";
 import { Plus, Edit, MapPin, Store as StoreIcon, Info } from "lucide-react";
-import { stores, type Store } from "@/data/mockData";
+import { type Store } from "@/data/mockData";
 import { useToast } from "@/hooks/use-toast";
+import { useData } from "@/contexts/DataContext";
 
 export function Lojas() {
-  const [storesList, setStoresList] = useState<Store[]>(stores);
+  const { stores: storesList, addStore, updateStore } = useData();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingStore, setEditingStore] = useState<Store | null>(null);
   const [formData, setFormData] = useState({
@@ -60,24 +61,16 @@ export function Lojas() {
 
     if (editingStore) {
       // Edit existing store
-      setStoresList(prev => prev.map(store => 
-        store.id === editingStore.id 
-          ? { ...store, ...formData }
-          : store
-      ));
+      updateStore(editingStore.id, formData);
       toast({
         title: "Sucesso",
         description: "Loja atualizada com sucesso"
       });
     } else {
       // Create new store
-      const newStore: Store = {
-        id: `store-${Date.now()}`,
-        ...formData
-      };
-      setStoresList(prev => [...prev, newStore]);
+      addStore(formData);
       toast({
-        title: "Sucesso", 
+        title: "Sucesso",
         description: "Loja criada com sucesso"
       });
     }
@@ -87,17 +80,14 @@ export function Lojas() {
   };
 
   const toggleStoreActive = (storeId: string) => {
-    setStoresList(prev => prev.map(store =>
-      store.id === storeId
-        ? { ...store, active: !store.active }
-        : store
-    ));
-    
     const store = storesList.find(s => s.id === storeId);
-    toast({
-      title: store?.active ? "Loja desativada" : "Loja ativada",
-      description: `${store?.name} foi ${store?.active ? 'desativada' : 'ativada'} com sucesso`
-    });
+    if (store) {
+      updateStore(storeId, { active: !store.active });
+      toast({
+        title: !store.active ? "Loja ativada" : "Loja desativada",
+        description: `${store.name} foi ${!store.active ? 'ativada' : 'desativada'} com sucesso`
+      });
+    }
   };
 
   return (

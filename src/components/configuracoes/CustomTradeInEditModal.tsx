@@ -15,12 +15,12 @@ import { Edit3, Copy, Save, AlertCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { formatCentsToBRL, centsToReais, reaisToCents, parseBRLToNumber } from "@/lib/currency";
 import { StandaloneCurrencyInput } from "@/lib/ControlledCurrencyInput";
-import { stores } from "@/data/mockData";
+import { stores, type TradeInDevice } from "@/data/mockData";
 
 interface CustomTradeInEditModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  selectedModels: any[]; // Trade-in models to edit
+  selectedModels: TradeInDevice[]; // Trade-in models to edit
   selectedStores: string[]; // Store IDs to show columns for
   onSave: (changes: { modelId: string; storeId: string; field: 'minValue' | 'maxValue'; newValue: number }[]) => Promise<boolean>;
 }
@@ -30,6 +30,7 @@ interface EditValue {
   storeId: string;
   field: 'minValue' | 'maxValue';
   value: number; // In cents
+  originalValue: number; // In cents - to track changes
 }
 
 export function CustomTradeInEditModal({ 
@@ -68,18 +69,23 @@ export function CustomTradeInEditModal({
           // Try to find existing values from the model's store data
           const storeData = model[storeId];
           
+          const minValueCents = reaisToCents(storeData?.minValue || 0);
+          const maxValueCents = reaisToCents(storeData?.maxValue || 0);
+
           initialValues.push({
             modelId: model.modelId,
             storeId,
             field: 'minValue',
-            value: reaisToCents(storeData?.minValue || 0)
+            value: minValueCents,
+            originalValue: minValueCents
           });
-          
+
           initialValues.push({
             modelId: model.modelId,
             storeId,
             field: 'maxValue',
-            value: reaisToCents(storeData?.maxValue || 0)
+            value: maxValueCents,
+            originalValue: maxValueCents
           });
         });
       });
@@ -146,6 +152,29 @@ export function CustomTradeInEditModal({
     return stores.find(s => s.id === storeId)?.name || storeId;
   };
 
+  // Check if a field has been changed
+  const hasChanged = useCallback((modelId: string, storeId: string, field: 'minValue' | 'maxValue'): boolean => {
+    const editValue = editValues.find(ev =>
+      ev.modelId === modelId && ev.storeId === storeId && ev.field === field
+    );
+    return editValue ? editValue.value !== editValue.originalValue : false;
+  }, [editValues]);
+
+  // Check if any field for a model has changed
+  const modelHasChanges = useCallback((modelId: string): boolean => {
+    return editValues.some(ev => ev.modelId === modelId && ev.value !== ev.originalValue);
+  }, [editValues]);
+
+  // Get count of changed models
+  const changedModelsCount = useCallback((): number => {
+    const changedModelIds = new Set(
+      editValues
+        .filter(ev => ev.value !== ev.originalValue)
+        .map(ev => ev.modelId)
+    );
+    return changedModelIds.size;
+  }, [editValues]);
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-6xl max-h-[90vh] overflow-hidden flex flex-col">
@@ -154,8 +183,13 @@ export function CustomTradeInEditModal({
             <Edit3 className="h-5 w-5" />
             Valores Personalizados - Aparelhos de Entrada
           </DialogTitle>
-          <DialogDescription>
-            Edite os valores mínimos e máximos de cada modelo por loja. {selectedModels.length} modelo(s) selecionado(s).
+          <DialogDescription className="flex items-center gap-3">
+            <span>Edite os valores mínimos e máximos de cada modelo por loja. {selectedModels.length} modelo(s) selecionado(s).</span>
+            {changedModelsCount() > 0 && (
+              <Badge variant="secondary" className="bg-orange-100 text-orange-800">
+                {changedModelsCount()} modelo(s) alterado(s)
+              </Badge>
+            )}
           </DialogDescription>
         </DialogHeader>
 
@@ -207,17 +241,25 @@ export function CustomTradeInEditModal({
                                 value={getValue(model.modelId, store.id, 'minValue')}
                                 onChange={(newValue) => updateValue(model.modelId, store.id, 'minValue', newValue)}
                                 placeholder="R$ 0,00"
-                                className="w-full text-sm"
+                                className={`w-full text-sm ${
+                                  hasChanged(model.modelId, store.id, 'minValue')
+                                    ? 'bg-orange-100 border-orange-300'
+                                    : ''
+                                }`}
                               />
                             </TableCell>
-                            
+
                             {/* Max Value */}
                             <TableCell key={`max-${model.modelId}-${store.id}`} className="p-2 border-r">
                               <StandaloneCurrencyInput
                                 value={getValue(model.modelId, store.id, 'maxValue')}
                                 onChange={(newValue) => updateValue(model.modelId, store.id, 'maxValue', newValue)}
                                 placeholder="R$ 0,00"
-                                className="w-full text-sm"
+                                className={`w-full text-sm ${
+                                  hasChanged(model.modelId, store.id, 'maxValue')
+                                    ? 'bg-orange-100 border-orange-300'
+                                    : ''
+                                }`}
                               />
                             </TableCell>
                           </>

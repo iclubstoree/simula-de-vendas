@@ -56,7 +56,7 @@ export function CurrencyInput({
     } else {
       setDisplayValue(formatCentsToBRL(value));
     }
-  }, []);
+  }, [value]);
   
   const handleFocus = () => {
     setIsFocused(true);

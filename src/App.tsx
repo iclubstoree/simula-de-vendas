@@ -13,33 +13,35 @@ import Tutorial from "./pages/Tutorial";
 import FAQ from "./pages/FAQ";
 import { FiltersProvider } from "./contexts/FiltersContext";
 import { DataProvider } from "./contexts/DataContext";
+import { UpdateProvider } from "./contexts/UpdateContext";
 
 const queryClient = new QueryClient();
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
-    <DataProvider>
-      <FiltersProvider>
-        <TooltipProvider>
-          <Toaster />
-          <Sonner />
-          <BrowserRouter>
-            <Layout>
-              <Routes>
-                <Route path="/" element={<Index />} />
-                <Route path="/dashboard" element={<Dashboard />} />
-                <Route path="/tutorial" element={<Tutorial />} />
-                <Route path="/faq" element={<FAQ />} />
-                <Route path="/configuracoes" element={<Configuracoes />} />
-                <Route path="/perfil" element={<Profile />} />
-                {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-                <Route path="*" element={<NotFound />} />
-              </Routes>
-            </Layout>
-          </BrowserRouter>
-        </TooltipProvider>
-      </FiltersProvider>
-    </DataProvider>
+    <UpdateProvider>
+      <DataProvider>
+        <FiltersProvider>
+          <TooltipProvider>
+            <Toaster />
+            <Sonner />
+            <BrowserRouter>
+              <Layout>
+                <Routes>
+                  <Route path="/" element={<Index />} />
+                  <Route path="/dashboard" element={<Dashboard />} />
+                  <Route path="/tutorial" element={<Tutorial />} />
+                  <Route path="/faq" element={<FAQ />} />
+                  <Route path="/configuracoes" element={<Configuracoes />} />
+                  <Route path="/perfil" element={<Profile />} />
+                  <Route path="*" element={<NotFound />} />
+                </Routes>
+              </Layout>
+            </BrowserRouter>
+          </TooltipProvider>
+        </FiltersProvider>
+      </DataProvider>
+    </UpdateProvider>
   </QueryClientProvider>
 );
 

@@ -45,7 +45,7 @@ export interface DashboardExportData {
   }>;
 }
 
-export function exportToPDF(data: DashboardExportData, filters?: any) {
+export function exportToPDF(data: DashboardExportData, filters?: Record<string, unknown>) {
   const doc = new jsPDF();
   const pageWidth = doc.internal.pageSize.width;
   const currentDate = new Date().toLocaleDateString('pt-BR');
@@ -127,7 +127,7 @@ export function exportToPDF(data: DashboardExportData, filters?: any) {
     }
   });
   
-  yPosition = (doc as any).lastAutoTable.finalY + 20;
+  yPosition = (doc as jsPDF & { lastAutoTable: { finalY: number } }).lastAutoTable.finalY + 20;
   
   // Top Models Section with enhanced data
   doc.setFontSize(16);
@@ -176,7 +176,7 @@ export function exportToPDF(data: DashboardExportData, filters?: any) {
     }
   });
   
-  yPosition = (doc as any).lastAutoTable.finalY + 20;
+  yPosition = (doc as jsPDF & { lastAutoTable: { finalY: number } }).lastAutoTable.finalY + 20;
   
   // Installment Usage Section with enhanced data
   doc.setFontSize(16);
@@ -282,7 +282,7 @@ export function exportToPDF(data: DashboardExportData, filters?: any) {
     }
   });
   
-  yPosition = (doc as any).lastAutoTable.finalY + 20;
+  yPosition = (doc as jsPDF & { lastAutoTable: { finalY: number } }).lastAutoTable.finalY + 20;
   
   // Latest Simulations Section with comprehensive data
   doc.setFontSize(16);
@@ -332,7 +332,7 @@ export function exportToPDF(data: DashboardExportData, filters?: any) {
     }
   });
   
-  yPosition = (doc as any).lastAutoTable.finalY + 20;
+  yPosition = (doc as jsPDF & { lastAutoTable: { finalY: number } }).lastAutoTable.finalY + 20;
   
   // Add summary insights section
   doc.setFontSize(16);
@@ -409,7 +409,7 @@ export function exportToPDF(data: DashboardExportData, filters?: any) {
   return fileName;
 }
 
-export function exportToCSV(data: DashboardExportData, filters?: any) {
+export function exportToCSV(data: DashboardExportData, filters?: Record<string, unknown>) {
   const currentDate = new Date().toISOString().split('T')[0];
   let csvContent = '';
   

@@ -14,7 +14,18 @@ import { exportToPDF, exportToCSV, DashboardExportData } from "@/utils/exportUti
 
 interface ExportMenuProps {
   data: DashboardExportData;
-  filters?: any;
+  filters?: {
+    selectedStores: string[];
+    selectedSellers: string[];
+    selectedBrands: string[];
+    selectedPaymentMethods: string[];
+    selectedConditions: string[];
+    selectedPeriod: string;
+    customDateRange: {
+      from: Date | undefined;
+      to: Date | undefined;
+    };
+  };
 }
 
 export function ExportMenu({ data, filters }: ExportMenuProps) {

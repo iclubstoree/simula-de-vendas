@@ -1,28 +1,18 @@
-import { useState } from "react";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Calendar } from "@/components/ui/calendar";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
-import { 
-  Filter, 
-  X, 
-  Calendar as CalendarIcon,
+import {
+  Filter,
   Store,
   User,
   Smartphone,
   CreditCard,
-  Package,
-  DollarSign,
-  Clock
+  Package
 } from "lucide-react";
-import { format } from "date-fns";
-import { ptBR } from "date-fns/locale";
-import { cn } from "@/lib/utils";
 import { useFilters } from "@/contexts/FiltersContext";
+import { PeriodFilter } from "./filters/PeriodFilter";
+import { SelectedFiltersDisplay } from "./filters/SelectedFiltersDisplay";
+import { FilterGroup } from "./filters/FilterGroup";
 
 interface FilterOption {
   id: string;
@@ -50,7 +40,6 @@ export function DashboardFilters() {
     hasActiveFilters
   } = useFilters();
 
-  const [isCustomDateOpen, setIsCustomDateOpen] = useState(false);
 
   const storeOptions: FilterOption[] = [
     { id: "castanhal", label: "Castanhal", value: "castanhal" },
@@ -91,8 +80,8 @@ export function DashboardFilters() {
 
 
   const handleMultiSelect = (
-    value: string, 
-    currentSelection: string[], 
+    value: string,
+    currentSelection: string[],
     setSelection: (selection: string[]) => void
   ) => {
     if (currentSelection.includes(value)) {
@@ -103,15 +92,11 @@ export function DashboardFilters() {
   };
 
   const removeFilter = (
-    value: string, 
-    currentSelection: string[], 
+    value: string,
+    currentSelection: string[],
     setSelection: (selection: string[]) => void
   ) => {
     setSelection(currentSelection.filter(item => item !== value));
-  };
-
-  const getFilterLabel = (options: FilterOption[], value: string) => {
-    return options.find(option => option.value === value)?.label || value;
   };
 
   const handlePeriodChange = (value: string) => {
@@ -121,13 +106,6 @@ export function DashboardFilters() {
     }
   };
 
-  const formatDateRange = () => {
-    if (!customDateRange.from) return "Selecionar período";
-    if (!customDateRange.to) {
-      return format(customDateRange.from, "dd/MM/yyyy", { locale: ptBR });
-    }
-    return `${format(customDateRange.from, "dd/MM/yyyy", { locale: ptBR })} - ${format(customDateRange.to, "dd/MM/yyyy", { locale: ptBR })}`;
-  };
 
   return (
     <Card className="p-4 space-y-4 card-animate hover-float">
@@ -148,292 +126,88 @@ export function DashboardFilters() {
 
       <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-4">
         {/* Período */}
-        <div className="space-y-2">
-          <Label className="text-xs font-medium text-muted-foreground">
-            <Clock className="inline h-3 w-3 mr-1" />
-            PERÍODO
-          </Label>
-          <div className="space-y-2">
-            <Select value={selectedPeriod} onValueChange={handlePeriodChange}>
-              <SelectTrigger className="w-full">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="hoje">Hoje</SelectItem>
-                <SelectItem value="ontem">Ontem</SelectItem>
-                <SelectItem value="7dias">Últimos 7 dias</SelectItem>
-                <SelectItem value="30dias">Últimos 30 dias</SelectItem>
-                <SelectItem value="90dias">Últimos 90 dias</SelectItem>
-                <SelectItem value="personalizado">Período personalizado</SelectItem>
-              </SelectContent>
-            </Select>
-            
-            {selectedPeriod === "personalizado" && (
-              <Popover open={isCustomDateOpen} onOpenChange={setIsCustomDateOpen}>
-                <PopoverTrigger asChild>
-                  <Button
-                    variant="outline"
-                    className={cn(
-                      "w-full justify-start text-left font-normal",
-                      !customDateRange.from && "text-muted-foreground"
-                    )}
-                  >
-                    <CalendarIcon className="mr-2 h-4 w-4" />
-                    {formatDateRange()}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0" align="start">
-                  <Calendar
-                    mode="range"
-                    selected={{
-                      from: customDateRange.from,
-                      to: customDateRange.to,
-                    }}
-                    onSelect={(range) => {
-                      if (range) {
-                        setCustomDateRange({ from: range.from, to: range.to });
-                      } else {
-                        setCustomDateRange({ from: undefined, to: undefined });
-                      }
-                    }}
-                    numberOfMonths={2}
-                    className="pointer-events-auto"
-                  />
-                </PopoverContent>
-              </Popover>
-            )}
-          </div>
-        </div>
+        <PeriodFilter
+          selectedPeriod={selectedPeriod}
+          customDateRange={customDateRange}
+          onPeriodChange={handlePeriodChange}
+          onCustomDateRangeChange={setCustomDateRange}
+        />
 
         {/* Lojas */}
-        <div className="space-y-2">
-          <Label className="text-xs font-medium text-muted-foreground">
-            <Store className="inline h-3 w-3 mr-1" />
-            LOJAS
-          </Label>
-          <Popover>
-            <PopoverTrigger asChild>
-              <Button variant="outline" className="w-full justify-start">
-                {selectedStores.length === 0 ? "Selecionar lojas" : `${selectedStores.length} selecionada(s)`}
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-48 p-2">
-              <div className="space-y-2">
-                {storeOptions.map((option) => (
-                  <div key={option.id} className="flex items-center space-x-2">
-                    <Checkbox
-                      id={`store-${option.id}`}
-                      checked={selectedStores.includes(option.value)}
-                      onCheckedChange={() => handleMultiSelect(option.value, selectedStores, setSelectedStores)}
-                    />
-                    <Label htmlFor={`store-${option.id}`} className="text-sm font-normal">
-                      {option.label}
-                    </Label>
-                  </div>
-                ))}
-              </div>
-            </PopoverContent>
-          </Popover>
-        </div>
+        <FilterGroup
+          title="LOJAS"
+          icon={Store}
+          options={storeOptions}
+          selectedValues={selectedStores}
+          onSelectionChange={handleMultiSelect}
+          setSelection={setSelectedStores}
+          placeholder="Selecionar lojas"
+        />
 
         {/* Vendedores */}
-        <div className="space-y-2">
-          <Label className="text-xs font-medium text-muted-foreground">
-            <User className="inline h-3 w-3 mr-1" />
-            VENDEDORES
-          </Label>
-          <Popover>
-            <PopoverTrigger asChild>
-              <Button variant="outline" className="w-full justify-start">
-                {selectedSellers.length === 0 ? "Selecionar vendedores" : `${selectedSellers.length} selecionado(s)`}
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-48 p-2">
-              <div className="space-y-2">
-                {sellerOptions.map((option) => (
-                  <div key={option.id} className="flex items-center space-x-2">
-                    <Checkbox
-                      id={`seller-${option.id}`}
-                      checked={selectedSellers.includes(option.value)}
-                      onCheckedChange={() => handleMultiSelect(option.value, selectedSellers, setSelectedSellers)}
-                    />
-                    <Label htmlFor={`seller-${option.id}`} className="text-sm font-normal">
-                      {option.label}
-                    </Label>
-                  </div>
-                ))}
-              </div>
-            </PopoverContent>
-          </Popover>
-        </div>
+        <FilterGroup
+          title="VENDEDORES"
+          icon={User}
+          options={sellerOptions}
+          selectedValues={selectedSellers}
+          onSelectionChange={handleMultiSelect}
+          setSelection={setSelectedSellers}
+          placeholder="Selecionar vendedores"
+        />
 
         {/* Marcas */}
-        <div className="space-y-2">
-          <Label className="text-xs font-medium text-muted-foreground">
-            <Smartphone className="inline h-3 w-3 mr-1" />
-            MARCAS
-          </Label>
-          <Popover>
-            <PopoverTrigger asChild>
-              <Button variant="outline" className="w-full justify-start">
-                {selectedBrands.length === 0 ? "Selecionar marcas" : `${selectedBrands.length} selecionada(s)`}
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-48 p-2">
-              <div className="space-y-2">
-                {brandOptions.map((option) => (
-                  <div key={option.id} className="flex items-center space-x-2">
-                    <Checkbox
-                      id={`brand-${option.id}`}
-                      checked={selectedBrands.includes(option.value)}
-                      onCheckedChange={() => handleMultiSelect(option.value, selectedBrands, setSelectedBrands)}
-                    />
-                    <Label htmlFor={`brand-${option.id}`} className="text-sm font-normal">
-                      {option.label}
-                    </Label>
-                  </div>
-                ))}
-              </div>
-            </PopoverContent>
-          </Popover>
-        </div>
+        <FilterGroup
+          title="MARCAS"
+          icon={Smartphone}
+          options={brandOptions}
+          selectedValues={selectedBrands}
+          onSelectionChange={handleMultiSelect}
+          setSelection={setSelectedBrands}
+          placeholder="Selecionar marcas"
+        />
 
         {/* Forma de Pagamento */}
-        <div className="space-y-2">
-          <Label className="text-xs font-medium text-muted-foreground">
-            <CreditCard className="inline h-3 w-3 mr-1" />
-            FORMA DE PAGAMENTO
-          </Label>
-          <Popover>
-            <PopoverTrigger asChild>
-              <Button variant="outline" className="w-full justify-start">
-                {selectedPaymentMethods.length === 0 ? "Selecionar pagamento" : `${selectedPaymentMethods.length} selecionada(s)`}
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-48 p-2">
-              <div className="space-y-2">
-                {paymentMethodOptions.map((option) => (
-                  <div key={option.id} className="flex items-center space-x-2">
-                    <Checkbox
-                      id={`payment-${option.id}`}
-                      checked={selectedPaymentMethods.includes(option.value)}
-                      onCheckedChange={() => handleMultiSelect(option.value, selectedPaymentMethods, setSelectedPaymentMethods)}
-                    />
-                    <Label htmlFor={`payment-${option.id}`} className="text-sm font-normal">
-                      {option.label}
-                    </Label>
-                  </div>
-                ))}
-              </div>
-            </PopoverContent>
-          </Popover>
-        </div>
+        <FilterGroup
+          title="FORMA DE PAGAMENTO"
+          icon={CreditCard}
+          options={paymentMethodOptions}
+          selectedValues={selectedPaymentMethods}
+          onSelectionChange={handleMultiSelect}
+          setSelection={setSelectedPaymentMethods}
+          placeholder="Selecionar pagamento"
+        />
 
         {/* Condição */}
-        <div className="space-y-2">
-          <Label className="text-xs font-medium text-muted-foreground">
-            <Package className="inline h-3 w-3 mr-1" />
-            CONDIÇÃO
-          </Label>
-          <Popover>
-            <PopoverTrigger asChild>
-              <Button variant="outline" className="w-full justify-start">
-                {selectedConditions.length === 0 ? "Selecionar condição" : `${selectedConditions.length} selecionada(s)`}
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-48 p-2">
-              <div className="space-y-2">
-                {conditionOptions.map((option) => (
-                  <div key={option.id} className="flex items-center space-x-2">
-                    <Checkbox
-                      id={`condition-${option.id}`}
-                      checked={selectedConditions.includes(option.value)}
-                      onCheckedChange={() => handleMultiSelect(option.value, selectedConditions, setSelectedConditions)}
-                    />
-                    <Label htmlFor={`condition-${option.id}`} className="text-sm font-normal">
-                      {option.label}
-                    </Label>
-                  </div>
-                ))}
-              </div>
-            </PopoverContent>
-          </Popover>
-        </div>
+        <FilterGroup
+          title="CONDIÇÃO"
+          icon={Package}
+          options={conditionOptions}
+          selectedValues={selectedConditions}
+          onSelectionChange={handleMultiSelect}
+          setSelection={setSelectedConditions}
+          placeholder="Selecionar condição"
+        />
       </div>
 
-      {/* Selected Filters Display - All in one line */}
-      {hasActiveFilters() && (
-        <div className="space-y-2">
-          <Label className="text-xs text-muted-foreground">Filtros selecionados:</Label>
-          <div className="flex flex-wrap gap-1">
-            {selectedStores.map((store) => (
-              <Badge key={`store-${store}`} variant="secondary" className="flex items-center gap-1">
-                {getFilterLabel(storeOptions, store)}
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="h-3 w-3 p-0 hover:bg-transparent"
-                  onClick={() => removeFilter(store, selectedStores, setSelectedStores)}
-                >
-                  <X className="h-2 w-2" />
-                </Button>
-              </Badge>
-            ))}
-            {selectedSellers.map((seller) => (
-              <Badge key={`seller-${seller}`} variant="secondary" className="flex items-center gap-1">
-                {getFilterLabel(sellerOptions, seller)}
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="h-3 w-3 p-0 hover:bg-transparent"
-                  onClick={() => removeFilter(seller, selectedSellers, setSelectedSellers)}
-                >
-                  <X className="h-2 w-2" />
-                </Button>
-              </Badge>
-            ))}
-            {selectedBrands.map((brand) => (
-              <Badge key={`brand-${brand}`} variant="secondary" className="flex items-center gap-1">
-                {getFilterLabel(brandOptions, brand)}
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="h-3 w-3 p-0 hover:bg-transparent"
-                  onClick={() => removeFilter(brand, selectedBrands, setSelectedBrands)}
-                >
-                  <X className="h-2 w-2" />
-                </Button>
-              </Badge>
-            ))}
-            {selectedPaymentMethods.map((payment) => (
-              <Badge key={`payment-${payment}`} variant="secondary" className="flex items-center gap-1">
-                {getFilterLabel(paymentMethodOptions, payment)}
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="h-3 w-3 p-0 hover:bg-transparent"
-                  onClick={() => removeFilter(payment, selectedPaymentMethods, setSelectedPaymentMethods)}
-                >
-                  <X className="h-2 w-2" />
-                </Button>
-              </Badge>
-            ))}
-            {selectedConditions.map((condition) => (
-              <Badge key={`condition-${condition}`} variant="secondary" className="flex items-center gap-1">
-                {getFilterLabel(conditionOptions, condition)}
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="h-3 w-3 p-0 hover:bg-transparent"
-                  onClick={() => removeFilter(condition, selectedConditions, setSelectedConditions)}
-                >
-                  <X className="h-2 w-2" />
-                </Button>
-              </Badge>
-            ))}
-          </div>
-        </div>
-      )}
+      {/* Selected Filters Display */}
+      <SelectedFiltersDisplay
+        selectedStores={selectedStores}
+        selectedSellers={selectedSellers}
+        selectedBrands={selectedBrands}
+        selectedPaymentMethods={selectedPaymentMethods}
+        selectedConditions={selectedConditions}
+        storeOptions={storeOptions}
+        sellerOptions={sellerOptions}
+        brandOptions={brandOptions}
+        paymentMethodOptions={paymentMethodOptions}
+        conditionOptions={conditionOptions}
+        onRemoveStore={(value) => removeFilter(value, selectedStores, setSelectedStores)}
+        onRemoveSeller={(value) => removeFilter(value, selectedSellers, setSelectedSellers)}
+        onRemoveBrand={(value) => removeFilter(value, selectedBrands, setSelectedBrands)}
+        onRemovePaymentMethod={(value) => removeFilter(value, selectedPaymentMethods, setSelectedPaymentMethods)}
+        onRemoveCondition={(value) => removeFilter(value, selectedConditions, setSelectedConditions)}
+        hasActiveFilters={hasActiveFilters()}
+      />
     </Card>
   );
 }

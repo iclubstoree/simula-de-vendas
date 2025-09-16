@@ -97,6 +97,17 @@ export function SalesSimulator() {
   const {
     toast
   } = useToast();
+
+  const clearForm = useCallback(() => {
+    setModel("");
+    setSelectedModel(null);
+    setPriceCents(0);
+    setDownPaymentCents(0);
+    setTradeInValueCents(0);
+    setShowModelSuggestions(false);
+    setModelWasSelected(false);
+  }, []);
+
   useEffect(() => {
     setRecentSearches(getSearchHistory());
     const savedMachine = localStorage.getItem('last-card-machine');
@@ -108,7 +119,7 @@ export function SalesSimulator() {
     if (!selectedStore) {
       setShowStoreModal(true);
     }
-  }, []);
+  }, [selectedStore]);
   useEffect(() => {
     if (selectedStore) {
       const machines = getCardMachinesByStore(selectedStore);
@@ -134,7 +145,7 @@ export function SalesSimulator() {
       // Reset form when store changes
       clearForm();
     }
-  }, [selectedStore, lastUsedCardMachine]);
+  }, [selectedStore, lastUsedCardMachine, clearForm, getCardMachinesByStore]);
 
   const handleModelInputChange = useCallback((value: string) => {
     setModel(value);
@@ -146,7 +157,7 @@ export function SalesSimulator() {
       setModelSuggestions([]);
       setShowModelSuggestions(value.trim() === '' && getSearchHistory().length > 0);
     }
-  }, [selectedStore]);
+  }, [selectedStore, searchContextModels]);
   const handleModelFocus = useCallback(() => {
     // If there's a model selected (either typed or from recent search), clear everything
     if (selectedModel || modelWasSelected) {
@@ -194,19 +205,10 @@ export function SalesSimulator() {
         handleModelSelect(modelToSelect);
       }
     }
-  }, [selectedStore, handleModelSelect]);
+  }, [selectedStore, handleModelSelect, searchContextModels]);
   const handleRecentSearchClick = useCallback((query: string) => {
     selectModelByName(query);
   }, [selectModelByName]);
-  const clearForm = useCallback(() => {
-    setModel("");
-    setSelectedModel(null);
-    setPriceCents(0);
-    setDownPaymentCents(0);
-    setTradeInValueCents(0);
-    setShowModelSuggestions(false);
-    setModelWasSelected(false);
-  }, []);
   const clearRecentSearches = () => {
     clearSearchHistory();
     setRecentSearches([]);

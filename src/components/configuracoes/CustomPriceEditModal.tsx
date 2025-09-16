@@ -10,7 +10,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Edit3, Save, Copy, AlertTriangle, Eye, X } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { stores, formatCurrency } from "@/data/mockData";
+import { stores, formatCurrency, type PhoneModel } from "@/data/mockData";
 import { parseBRLToNumber, formatCentsToBRL } from "@/lib/currency";
 
 interface ModelPriceData {
@@ -28,7 +28,7 @@ interface ModelPriceData {
 interface CustomPriceEditModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  selectedModels: any[];
+  selectedModels: PhoneModel[];
   selectedStores: string[];
   onSave: (changes: { modelId: string; storeId: string; newPrice: number }[]) => Promise<boolean>;
 }

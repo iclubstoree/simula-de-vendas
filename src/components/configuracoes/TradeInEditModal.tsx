@@ -94,7 +94,7 @@ export function TradeInEditModal({
               name: modelName,
               minValue,
               maxValue,
-              store: store.id as any,
+              store: store.id as 'castanhal' | 'belem' | 'ananindeua',
               active: true
             };
         

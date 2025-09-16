@@ -48,17 +48,22 @@ export function Taxas() {
     name: "",
     stores: [] as string[],
     maxInstallments: "12",
-    active: true
+    active: true,
+    paymentTypes: {
+      debit: true,
+      credit: true
+    }
   });
   
   const [ratesForm, setRatesForm] = useState<{[key: number]: string}>({});
+  const [debitRateForm, setDebitRateForm] = useState<string>("");
   
   const { toast } = useToast();
 
   // Filter machines by store
   const filteredMachines = cardMachines.filter(machine => {
     if (selectedStore === "all") return true;
-    return machine.store === selectedStore;
+    return machine.stores.includes(selectedStore);
   });
 
   const handleOpenDialog = (machine?: CardMachine) => {
@@ -66,9 +71,10 @@ export function Taxas() {
       setEditingMachine(machine);
       setMachineForm({
         name: machine.name,
-        stores: [machine.store], // Convert single store to array for backward compatibility
+        stores: machine.stores, // Use the array of stores directly
         maxInstallments: machine.maxInstallments.toString(),
-        active: machine.active ?? true
+        active: machine.active ?? true,
+        paymentTypes: machine.paymentTypes || { debit: true, credit: true }
       });
     } else {
       setEditingMachine(null);
@@ -76,7 +82,11 @@ export function Taxas() {
         name: "",
         stores: [],
         maxInstallments: "12",
-        active: true
+        active: true,
+        paymentTypes: {
+          debit: true,
+          credit: true
+        }
       });
     }
     setDialogOpen(true);
@@ -85,12 +95,13 @@ export function Taxas() {
   const handleOpenRatesDialog = (machine: CardMachine) => {
     setEditingMachine(machine);
     const rates: {[key: number]: string} = {};
-    
+
     // Initialize rates form with current machine rates
     for (let i = 1; i <= machine.maxInstallments; i++) {
       rates[i] = (machine.rates[i] || 0).toString();
     }
     setRatesForm(rates);
+    setDebitRateForm((machine.debitRate || 0).toString());
     setRatesDialogOpen(true);
   };
 
@@ -114,13 +125,15 @@ export function Taxas() {
       return;
     }
 
+
     if (editingMachine) {
       // Edit existing machine
       updateCardMachine(editingMachine.id, {
         name: machineForm.name,
-        store: machineForm.stores[0], // Use first store for backward compatibility
+        stores: machineForm.stores, // Use all selected stores
         maxInstallments,
-        active: machineForm.active
+        active: machineForm.active,
+        paymentTypes: machineForm.paymentTypes
       });
       toast({
         title: "Sucesso",
@@ -132,20 +145,21 @@ export function Taxas() {
       for (let i = 1; i <= maxInstallments; i++) {
         defaultRates[i] = i === 1 ? 0 : i * 1.5; // Default rate calculation
       }
-      
-      // Create machines for each selected store
-      const newMachines: CardMachine[] = machineForm.stores.map(storeId => ({
-        id: `machine-${Date.now()}-${storeId}`,
+
+      // Create single machine for all selected stores
+      const newMachine: CardMachine = {
+        id: `machine-${Date.now()}`,
         name: machineForm.name,
-        store: storeId,
+        stores: machineForm.stores,
         maxInstallments,
         rates: defaultRates,
-        active: machineForm.active
-      }));
-      
-      newMachines.forEach(machine => addCardMachine(machine));
+        active: machineForm.active,
+        paymentTypes: machineForm.paymentTypes
+      };
+
+      addCardMachine(newMachine);
       toast({
-        title: "Sucesso", 
+        title: "Sucesso",
         description: "Máquina criada com sucesso"
       });
     }
@@ -177,8 +191,22 @@ export function Taxas() {
 
     if (hasError) return;
 
-    // Update machine rates
-    updateCardMachine(editingMachine.id, { rates: newRates });
+    // Validate debit rate
+    const debitRateValue = parseFloat(debitRateForm || "0");
+    if (isNaN(debitRateValue) || debitRateValue < 0 || debitRateValue > 100) {
+      toast({
+        title: "Erro",
+        description: "Taxa de débito deve ser um número entre 0 e 100",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    // Update machine rates and debit rate
+    updateCardMachine(editingMachine.id, {
+      rates: newRates,
+      debitRate: debitRateValue
+    });
 
     setRatesDialogOpen(false);
     setEditingMachine(null);
@@ -199,12 +227,13 @@ export function Taxas() {
 
   const generateDefaultRates = () => {
     if (!editingMachine) return;
-    
+
     const defaultRates: {[key: number]: string} = {};
     for (let i = 1; i <= editingMachine.maxInstallments; i++) {
       defaultRates[i] = i === 1 ? "0" : (i * 1.5).toString();
     }
     setRatesForm(defaultRates);
+    setDebitRateForm("1.2");
     
     toast({
       title: "Taxas geradas",
@@ -300,7 +329,46 @@ export function Taxas() {
                   onChange={(e) => setMachineForm(prev => ({ ...prev, maxInstallments: e.target.value }))}
                 />
               </div>
-              
+
+              {/* Payment Types Section */}
+              <div className="space-y-3">
+                <Label>Tipos de Pagamento Aceitos</Label>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="flex items-center space-x-2">
+                    <input
+                      type="checkbox"
+                      id="debit"
+                      checked={machineForm.paymentTypes.debit}
+                      onChange={(e) =>
+                        setMachineForm(prev => ({
+                          ...prev,
+                          paymentTypes: { ...prev.paymentTypes, debit: e.target.checked }
+                        }))
+                      }
+                      className="rounded border-input"
+                    />
+                    <Label htmlFor="debit" className="text-sm">Débito</Label>
+                  </div>
+
+                  <div className="flex items-center space-x-2">
+                    <input
+                      type="checkbox"
+                      id="credit"
+                      checked={machineForm.paymentTypes.credit}
+                      onChange={(e) =>
+                        setMachineForm(prev => ({
+                          ...prev,
+                          paymentTypes: { ...prev.paymentTypes, credit: e.target.checked }
+                        }))
+                      }
+                      className="rounded border-input"
+                    />
+                    <Label htmlFor="credit" className="text-sm">Crédito</Label>
+                  </div>
+                </div>
+              </div>
+
+
               <div className="flex items-center space-x-2">
                 <Switch
                   id="active"
@@ -366,10 +434,8 @@ export function Taxas() {
               <TableHeader>
                 <TableRow>
                   <TableHead>Máquina</TableHead>
-                  <TableHead>Loja</TableHead>
+                  <TableHead>Lojas</TableHead>
                   <TableHead>Máx. Parcelas</TableHead>
-                  <TableHead>Taxa Débito</TableHead>
-                  <TableHead>Taxa 12x</TableHead>
                   <TableHead className="text-right">Ações</TableHead>
                 </TableRow>
               </TableHeader>
@@ -383,18 +449,21 @@ export function Taxas() {
                       </div>
                     </TableCell>
                     <TableCell>
-                      {stores.find(s => s.id === machine.store)?.name}
+                      <div className="flex flex-wrap gap-1">
+                        {machine.stores.map(storeId => {
+                          const store = stores.find(s => s.id === storeId);
+                          return store ? (
+                            <Badge key={storeId} variant="outline" className="text-xs">
+                              {store.name}
+                            </Badge>
+                          ) : null;
+                        })}
+                      </div>
                     </TableCell>
                     <TableCell>
-                      <Badge variant="outline">
+                      <Badge variant="secondary">
                         {machine.maxInstallments}x
                       </Badge>
-                    </TableCell>
-                    <TableCell>
-                      {machine.rates[1]?.toFixed(1)}%
-                    </TableCell>
-                    <TableCell>
-                      {machine.rates[12]?.toFixed(1)}%
                     </TableCell>
                     <TableCell className="text-right">
                       <div className="flex gap-2 justify-end">
@@ -464,31 +533,65 @@ export function Taxas() {
               </Button>
             </div>
             
-            <div className="space-y-3 max-h-64 overflow-y-auto">
-              {editingMachine && Array.from({ length: editingMachine.maxInstallments }, (_, i) => i + 1).map((installment) => (
-                <div key={installment} className="flex items-center justify-between p-3 border rounded-lg">
-                  <Label htmlFor={`rate-${installment}`} className="font-medium">
-                    {installment === 1 ? 'Débito' : `${installment}x de`}
-                  </Label>
-                  <div className="flex items-center gap-2">
-                    <Input
-                      id={`rate-${installment}`}
-                      type="number"
-                      min="0"
-                      max="100"
-                      step="0.1"
-                      placeholder="0.0"
-                      value={ratesForm[installment] || ""}
-                      onChange={(e) => setRatesForm(prev => ({ 
-                        ...prev, 
-                        [installment]: e.target.value 
-                      }))}
-                      className="text-center w-20"
-                    />
-                    <span className="text-sm text-muted-foreground">%</span>
+            <div className="space-y-4">
+              {/* Debit Rate Section */}
+              {editingMachine?.paymentTypes?.debit && (
+                <div>
+                  <h4 className="text-sm font-medium mb-2">Taxa de Débito</h4>
+                  <div className="flex items-center justify-between p-3 border rounded-lg bg-blue-50">
+                    <Label htmlFor="debit-rate" className="font-medium text-blue-700">
+                      Débito
+                    </Label>
+                    <div className="flex items-center gap-2">
+                      <Input
+                        id="debit-rate"
+                        type="number"
+                        min="0"
+                        max="100"
+                        step="0.1"
+                        placeholder="0.0"
+                        value={debitRateForm}
+                        onChange={(e) => setDebitRateForm(e.target.value)}
+                        className="text-center w-20"
+                      />
+                      <span className="text-sm text-muted-foreground">%</span>
+                    </div>
                   </div>
                 </div>
-              ))}
+              )}
+
+              {/* Credit Installments Section */}
+              {editingMachine?.paymentTypes?.credit && (
+                <div>
+                  <h4 className="text-sm font-medium mb-2">Taxas de Crédito por Parcela</h4>
+                  <div className="space-y-3 max-h-48 overflow-y-auto">
+                    {editingMachine && Array.from({ length: editingMachine.maxInstallments }, (_, i) => i + 1).map((installment) => (
+                      <div key={installment} className="flex items-center justify-between p-3 border rounded-lg">
+                        <Label htmlFor={`rate-${installment}`} className="font-medium">
+                          {installment}x
+                        </Label>
+                        <div className="flex items-center gap-2">
+                          <Input
+                            id={`rate-${installment}`}
+                            type="number"
+                            min="0"
+                            max="100"
+                            step="0.1"
+                            placeholder="0.0"
+                            value={ratesForm[installment] || ""}
+                            onChange={(e) => setRatesForm(prev => ({
+                              ...prev,
+                              [installment]: e.target.value
+                            }))}
+                            className="text-center w-20"
+                          />
+                          <span className="text-sm text-muted-foreground">%</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           </div>
           
